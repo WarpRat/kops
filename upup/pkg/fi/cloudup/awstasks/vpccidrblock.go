@@ -48,17 +48,38 @@ func (e *VPCCIDRBlock) Find(c *fi.Context) (*VPCCIDRBlock, error) {
 		return nil, err
 	}
 
-	actual := &VPCCIDRBlock{
-		CIDRBlock: e.CIDRBlock,
+	if e.CIDRBlock == vpc.CidrBlock {
+		actual := &VPCCIDRBlock{
+			CIDRBlock: e.CIDRBlock,
+		}
+		actual.VPC = &VPC{ID: vpc.VpcId}
+
+		// Prevent spurious changes
+		actual.Shared = e.Shared
+		actual.Name = e.Name
+		actual.Lifecycle = e.Lifecycle
+
+		return actual, nil
 	}
-	actual.VPC = &VPC{ID: vpc.VpcId}
 
-	// Prevent spurious changes
-	actual.Shared = e.Shared
-	actual.Name = e.Name
-	actual.Lifecycle = e.Lifecycle
+	for _, additionalCidr := range vpc.CidrBlockAssociationSet {
+		if e.CIDRBlock == additionalCidr.CidrBlock {
+			actual := &VPCCIDRBlock{
+				CIDRBlock: e.CIDRBlock,
+			}
+			actual.VPC = &VPC{ID: vpc.VpcId}
 
-	return actual, nil
+			// Prevent spurious changes
+			actual.Shared = e.Shared
+			actual.Name = e.Name
+			actual.Lifecycle = e.Lifecycle
+
+			return actual, nil
+		}
+	}
+
+	return nil, nil
+
 }
 
 func (e *VPCCIDRBlock) Run(c *fi.Context) error {
